@@ -1,0 +1,35 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "js_be"
+version = "0.1.0"
+description = "fastapi application that utilizes jinja templates and serves htmx front end doing server side rendering"
+readme = "README.md"
+authors = [
+    "Jalal Zahraoui <jal.zahraoui@gmail.com>"
+]
+license = "Closed Source"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent"
+]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+fastapi = "*"
+uvicorn = "*"
+sqlalchemy = ">=2.0.0"
+psycopg2-binary = "*"
+python-dotenv = "*"
+pydantic = "*"
+python-multipart = "*"
+pyright = "*"
+starlette-csrf = "*"
+
+[tool.poetry.urls]
+Homepage = "https://github.com/yourusername/my_app"
+
+[tool.poetry.scripts]
+js_app_be = "js_be.main:main"
