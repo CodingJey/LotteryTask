@@ -1,35 +1,34 @@
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
-name = "js_be"
+[project]
+name = "lottery_ms"
 version = "0.1.0"
-description = "fastapi application that utilizes jinja templates and serves htmx front end doing server side rendering"
+description = "fastapi microservice that draws ballots"
 readme = "README.md"
 authors = [
-    "Jalal Zahraoui <jal.zahraoui@gmail.com>"
+    {name="Jalal Zahraoui", email="jal.zahraoui@gmail.com"}
 ]
-license = "Closed Source"
+requires-python = ">=3.10"
+
+license = "FOSS"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent"
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<4.0"
-fastapi = "*"
-uvicorn = "*"
-sqlalchemy = ">=2.0.0"
-psycopg2-binary = "*"
-python-dotenv = "*"
-pydantic = "*"
-python-multipart = "*"
-pyright = "*"
-starlette-csrf = "*"
+[tool.poetry]
+package-mode = false
 
 [tool.poetry.urls]
 Homepage = "https://github.com/yourusername/my_app"
 
-[tool.poetry.scripts]
-js_app_be = "js_be.main:main"
+[tool.poetry.dependencies]
+fastapi = "^0.115.12"
+pyright = "^1.1.400"
+psycopg2-binary = "^2.9.10"
+sqlalchemy = "^2.0.40"
+uvicorn = "^0.34.2"
+python-dotenv = "^1.1.0"
+pydantic = "^2.11.4"
+starlette = "^0.46.2"
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

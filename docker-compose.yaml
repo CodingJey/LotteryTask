@@ -2,14 +2,14 @@ services:
   database:
     image: postgres:14-alpine
     environment:
-      POSTGRES_USER: fastapi_user
+      POSTGRES_USER: fastapi_user # Here in real world you would be using ${SECRET.user} or equivalents
       POSTGRES_PASSWORD: fastapi_password
       POSTGRES_DB: fastapi_db
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data/  # Persist data across restarts
-      - ./app/db/sql:/docker-entrypoint-initdb.d
+      - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "fastapi_user", "-d", "fastapi_db"]
       interval: 5s
@@ -22,9 +22,6 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: "${DATABASE_URL}"
-      ENV: "${ENV}"
-      DOMAIN: "${DOMAIN}"
-      SECRET_KEY: "${SECRET_KEY}"
     env_file:
       - .env
     depends_on:

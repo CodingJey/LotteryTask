@@ -1,19 +1,23 @@
-import uuid
-from sqlalchemy import  Column, String, Date, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
-from datetime import datetime
+from sqlalchemy import Column, ForeignKey, Index, Integer, String, Date,Numeric
+from sqlalchemy.orm import relationship
 from app.models.base import Base
 
 class Ballot(Base):
     __tablename__ = 'ballots'
 
-    ballot_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('participants.user_id'), nullable=False)
-    lottery_id = Column(UUID(as_uuid=True), ForeignKey('lotteries.lottery_id'), nullable=False)
-    ballot_number = Column(String)
+    ballot_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('participants.user_id'), nullable=False)
+    lottery_id = Column(Integer, ForeignKey('lotteries.lottery_id'), nullable=False)
+    ballot_number = Column(Integer)
     expiry_date = Column(Date)
 
-    user = relationship("Participant", back_populates="ballots")
-    lottery = relationship("Lottery", back_populates="ballots")
-    winner = relationship("WinningBallot", back_populates="ballot", uselist=False)
+    users = relationship("Participant", back_populates="ballots") 
+    lottery = relationship("Lottery", back_populates="ballots") 
+
+    winning_entry = relationship("WinningBallot", back_populates="ballot", uselist=False)
+
+    __table_args__ = (
+        Index('idx_ballots_user', 'user_id'),
+        Index('idx_ballots_lottery', 'lottery_id'),
+    )
+    

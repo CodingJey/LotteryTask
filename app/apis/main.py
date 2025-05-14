@@ -1,7 +1,7 @@
 from fastapi import APIRouter
-from app.apis.routes import main_routes
+from app.apis.routes import participant_routes
 
-api_router = APIRouter()
+main_router = APIRouter(prefix="/lottery", tags=["lottery"])
 
-#Adding Subscription API
-api_router.include_router(main_routes.router)
+#Adding routes to Main Router
+main_router.include_router(participant_routes.router)

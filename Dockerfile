@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Poetry using the official installer.
 # Here we set a specific version (1.2.2 or higher is recommended so the export command works)
-ENV POETRY_VERSION=1.8.4
+ENV POETRY_VERSION=2.1.3
 RUN curl -sSL https://install.python-poetry.org | python3 - --version $POETRY_VERSION
 
 # Make Poetry available on the PATH. The installer puts it in /root/.local/bin

@@ -3,7 +3,6 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi import HTTPException
-from slowapi.errors import RateLimitExceeded
 from pydantic import ValidationError
 
 # Configure logging
@@ -19,30 +18,6 @@ def register_exception_handlers(app):
     Returns:
         FastAPI application with registered exception handlers
     """
-    @app.exception_handler(RateLimitExceeded)
-    async def rate_limit_exception_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
-        """
-        Handle rate limit exceeded errors with detailed logging.
-        
-        Args:
-            request: Incoming request details
-            exc: Rate limit exceeded exception
-        
-        Returns:
-            JSON response with 429 status code
-        """
-        logger.warning(
-            "Rate limit exceeded",
-            extra={
-                "path": request.url.path,
-                "method": request.method,
-                "client_host": request.client
-            }
-        )
-        return JSONResponse(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            content={"message": "Too many requests, please try again later"}
-        )
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
