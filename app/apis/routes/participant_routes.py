@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from datetime import date
 from typing import List, Optional
 
-from app.services.participant_service import ParticipantService, get_participant_service
+from app.services.participant_service import ParticipantService
 from app.schemas.participant import ( ParticipantCreate, ParticipantResponse )
 from app.schemas.ballots import (BallotCreate, BallotResponse)
 
@@ -11,7 +11,7 @@ router = APIRouter()
 @router.post("/participant", response_model=ParticipantResponse, status_code=201)
 def create_ballot(
     participant_in: ParticipantCreate,
-    service: ParticipantService = Depends(get_participant_service),
+    service: ParticipantService = Depends(ParticipantService),
 ):
     """
     Registers a new participant. Raises 400 if already exists.
@@ -20,7 +20,7 @@ def create_ballot(
 
 @router.get("/participant", response_model=List[ParticipantResponse])
 def get_participants_list(
-    service: ParticipantService = Depends(get_participant_service)
+    service: ParticipantService = Depends(ParticipantService)
 ):
     """
     Retrieve all participants.
@@ -32,7 +32,7 @@ def get_participants_list(
 @router.get("/participant/{user_id}", response_model=Optional[ParticipantResponse])
 def get_participant_by_id(
     user_id : int,
-    service: ParticipantService = Depends(get_participant_service)
+    service: ParticipantService = Depends(ParticipantService)
 ):
     """
     Retrieve participant by id.

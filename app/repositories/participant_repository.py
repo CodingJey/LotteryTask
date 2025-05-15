@@ -5,10 +5,13 @@ from sqlalchemy.orm import Session
 import logging 
 from typing import List, Optional
 from datetime import date
+from app.db.database import db  
+from fastapi import Depends
+from app.repositories.interfaces.participant_repo_interface import ParticipantRepositoryInterface
 
 logger = logging.getLogger("app")
 
-class ParticipantRepository(BaseRepository[Participant]):
+class ParticipantRepository(BaseRepository[Participant],ParticipantRepositoryInterface):
     def __init__(self, session: Session):
         super().__init__(session, Participant)
 
@@ -45,5 +48,5 @@ class ParticipantRepository(BaseRepository[Participant]):
         return self.list_all()
 
 
-def get_participant_repository(session: Session) -> ParticipantRepository:
-    return ParticipantRepository(session)
+def get_participant_repository_provider(session: Session = Depends(db.get_db)) -> ParticipantRepositoryInterface: 
+    return ParticipantRepository(session=session) 

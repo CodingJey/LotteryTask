@@ -15,7 +15,7 @@ CREATE TABLE Ballots (
     ballot_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES Participants(user_id),
     lottery_id INTEGER NOT NULL REFERENCES Lotteries(lottery_id),
-    ballot_number VARCHAR(255),
+    ballot_number VARCHAR(255) UNIQUE,
     expiry_date DATE,
     CONSTRAINT fk_participant FOREIGN KEY (user_id) REFERENCES Participants(user_id)
 );

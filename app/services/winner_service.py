@@ -1,29 +1,21 @@
 import logging
 from datetime import date
 from typing import Optional, List
-from app.db.database import db 
-
 from fastapi import Depends, HTTPException
-from sqlalchemy.orm import Session
-
-from app.db.database import db 
-from app.repositories.winner_ballots_repository import (
-    WinningBallotRepository,
-    get_winning_ballot_repository,
-)
+from app.repositories.interfaces.winner_ballots_repo_interface import WinningBallotRepositoryInterface
 from app.models.winning_ballots import WinningBallot
 from app.schemas.winning_ballot import WinningBallotResponse
 from app.repositories.winner_ballots_repository import (
-     get_winning_ballot_repository,
+     get_winning_ballot_repository_provider,
 )
 logger = logging.getLogger(__name__)
 
 class WinnerService:
     def __init__(
         self,
-        session: Session = Depends(db.get_db),
+        winning_repo: WinningBallotRepositoryInterface = Depends(get_winning_ballot_repository_provider)
     ):
-        self.winning_repo = get_winning_ballot_repository(session=session)
+        self.winning_repo = winning_repo
         logger.debug("Initialized WinnerService")
 
     def record_new_winner(
@@ -91,7 +83,3 @@ class WinnerService:
                 status_code=500,
                 detail="An unexpected error occurred while retrieving winning ballots."
             )
-
-def get_winner_service(session: Session = Depends(db.get_db)) -> WinnerService:
-    logger.debug("Providing WinnerService via DI")
-    return WinnerService(session=session)

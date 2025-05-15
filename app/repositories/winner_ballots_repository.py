@@ -7,11 +7,14 @@ import logging
 from typing import Optional, List
 from datetime import date 
 import random
+from app.db.database import db  
+from fastapi import Depends
+from app.repositories.interfaces.winner_ballots_repo_interface import WinningBallotRepositoryInterface
 
 logger = logging.getLogger("app")
 
 
-class WinningBallotRepository(BaseRepository[WinningBallot]):
+class WinningBallotRepository(BaseRepository[WinningBallot], WinningBallotRepositoryInterface):
     def __init__(self, session: Session):
         super().__init__(session, WinningBallot)
 
@@ -88,5 +91,7 @@ class WinningBallotRepository(BaseRepository[WinningBallot]):
         """List all winning ballots."""
         return self.list_all()
     
-def get_winning_ballot_repository(session: Session) -> WinningBallotRepository:
-    return WinningBallotRepository(session)
+def get_winning_ballot_repository_provider(
+    session: Session = Depends(db.get_db)
+) -> WinningBallotRepositoryInterface:
+    return WinningBallotRepository(session=session)

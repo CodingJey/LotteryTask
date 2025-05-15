@@ -8,7 +8,7 @@ class Ballot(Base):
     ballot_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('participants.user_id'), nullable=False)
     lottery_id = Column(Integer, ForeignKey('lotteries.lottery_id'), nullable=False)
-    ballot_number = Column(Integer)
+    ballot_number = Column(Integer, unique=True)
     expiry_date = Column(Date)
 
     users = relationship("Participant", back_populates="ballots") 

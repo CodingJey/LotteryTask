@@ -2,31 +2,31 @@ import logging
 from datetime import date, timedelta
 from typing import Optional, List
 import random
-from app.db.database import db  
 from app.schemas.ballots import BallotResponse
 from app.schemas.participant import ParticipantResponse
 from fastapi import Depends,HTTPException
 from sqlalchemy.orm import Session
 from app.repositories.participant_repository import (
-    ParticipantRepository, get_participant_repository,
+   get_participant_repository_provider,
 )
 from app.repositories.lottery_repository import (
-    LotteryRepository, get_lottery_repository,
+   get_lottery_repository_provider,
 )
 from app.repositories.ballot_repository import (
-    BallotRepository, get_ballot_repository,
+    get_ballot_repository_provider,
 )
 from app.repositories.winner_ballots_repository import (
-    WinningBallotRepository, get_winning_ballot_repository,
+    get_winning_ballot_repository_provider,
 )
+from app.repositories.interfaces.ballot_repo_interface import BallotRepositoryInterface
+from app.repositories.interfaces.lottery_repo_interface import LotteryRepositoryInterface
+from app.repositories.interfaces.participant_repo_interface import ParticipantRepositoryInterface
+from app.repositories.interfaces.winner_ballots_repo_interface import WinningBallotRepositoryInterface
 from app.models.ballot import (
   Ballot, 
 )
 from app.models.lottery import (
     Lottery,
-)
-from app.schemas.winning_ballot import(
-    WinningBallotResponse
 )
 
 logger = logging.getLogger("app.lottery")
@@ -36,12 +36,16 @@ logger.setLevel(logging.INFO)
 class BallotService:
     def __init__(
         self,
-        session: Session = Depends(db.get_db)
+        # Repositories are now directly injected
+        participant_repo: ParticipantRepositoryInterface = Depends(get_participant_repository_provider),
+        lottery_repo: LotteryRepositoryInterface = Depends(get_lottery_repository_provider),
+        ballot_repo: BallotRepositoryInterface = Depends(get_ballot_repository_provider),
+        winning_repo: WinningBallotRepositoryInterface = Depends(get_winning_ballot_repository_provider)
     ) -> None:
-        self.participant_repo = get_participant_repository(session=session)
-        self.lottery_repo = get_lottery_repository(session=session)
-        self.ballot_repo = get_ballot_repository(session=session)
-        self.winning_repo = get_winning_ballot_repository(session=session)
+        self.participant_repo = participant_repo
+        self.lottery_repo = lottery_repo
+        self.ballot_repo = ballot_repo
+        self.winning_repo = winning_repo
         logger.debug("Initialized LotteryService with repos: %s, %s, %s, %s",
                      self.participant_repo, self.lottery_repo, self.ballot_repo, self.winning_repo)
 
@@ -83,10 +87,3 @@ class BallotService:
             return ballot_list
         except:
             raise HTTPException(status_code=404, detail="No ballots found for this user")
-
-
-
-        
-def get_ballot_service(session: Session = Depends(db.get_db)) -> BallotService:
-    logger.debug("Providing LotteryService via DI")
-    return BallotService(session=session)

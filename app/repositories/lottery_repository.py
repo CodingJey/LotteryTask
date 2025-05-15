@@ -6,10 +6,13 @@ import logging
 from datetime import date
 from typing import List, Optional
 from fastapi import HTTPException
+from app.db.database import db  
+from fastapi import Depends
+from app.repositories.interfaces.lottery_repo_interface import LotteryRepositoryInterface
 
 logger = logging.getLogger("app")
 
-class LotteryRepository(BaseRepository[Lottery]):
+class LotteryRepository(BaseRepository[Lottery], LotteryRepositoryInterface):
     def __init__(self, session: Session):
         super().__init__(session, Lottery)
 
@@ -115,6 +118,7 @@ class LotteryRepository(BaseRepository[Lottery]):
             return None
 
 
-
-def get_lottery_repository(session: Session) -> LotteryRepository:
-    return LotteryRepository(session)
+def get_lottery_repository_provider(
+    session: Session = Depends(db.get_db)
+) -> LotteryRepositoryInterface:
+    return LotteryRepository(session=session)

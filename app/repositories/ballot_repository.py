@@ -2,15 +2,17 @@ from app.models.ballot import Ballot
 from app.repositories.base_repository import BaseRepository
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from fastapi import Depends
 import logging 
 from typing import List, Optional
 from datetime import date
 import random
 import string 
-
+from app.db.database import db
+from app.repositories.interfaces.ballot_repo_interface import BallotRepositoryInterface
 logger = logging.getLogger("app")
 
-class BallotRepository(BaseRepository[Ballot]):
+class BallotRepository(BaseRepository[Ballot], BallotRepositoryInterface):
     def __init__(self, session: Session):
         super().__init__(session, Ballot)
 
@@ -59,5 +61,7 @@ class BallotRepository(BaseRepository[Ballot]):
         result = self.session.execute(stmt)
         return result.scalars().all()
 
-def get_ballot_repository(session: Session) -> BallotRepository:
-    return BallotRepository(session)
+def get_ballot_repository_provider(
+    session: Session = Depends(db.get_db)
+) -> BallotRepositoryInterface:
+    return BallotRepository(session=session)

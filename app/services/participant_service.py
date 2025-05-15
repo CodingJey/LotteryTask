@@ -4,10 +4,10 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.database import db 
 from app.models.participant import Participant
-from app.repositories.participant_repository import (
-    ParticipantRepository, get_participant_repository,
-)
-from app.repositories.ballot_repository import (BallotRepository, get_ballot_repository )
+from app.repositories.participant_repository import ( get_participant_repository_provider)
+from app.repositories.ballot_repository import ( get_ballot_repository_provider)
+from app.repositories.interfaces.ballot_repo_interface import BallotRepositoryInterface
+from app.repositories.interfaces.participant_repo_interface import ParticipantRepositoryInterface
 from app.schemas.participant import (
     ParticipantCreate, ParticipantResponse,
 )
@@ -21,16 +21,17 @@ class ParticipantService:
     """
     def __init__(
         self,
-        session: Session = Depends(db.get_db)
-    ) -> None:
+        ballot_repo: BallotRepositoryInterface = Depends(get_ballot_repository_provider),
+        participant_repo: ParticipantRepositoryInterface = Depends(get_participant_repository_provider),
+        ) -> None:
         """
         Initializes the ParticipantService.
 
         Args:
             session: The database session.
         """
-        self.ballot_repo : BallotRepository = get_ballot_repository(session=session)
-        self.participant_repo: ParticipantRepository = get_participant_repository(session=session)
+        self.ballot_repo : BallotRepositoryInterface = ballot_repo
+        self.participant_repo: ParticipantRepositoryInterface = participant_repo
         logger.debug("Initialized ParticipantService with ParticipantRepository: %s", self.participant_repo)
 
     def register_participant(
@@ -150,17 +151,3 @@ class ParticipantService:
                 status_code=500,
                 detail="An unexpected error occurred while retrieving participants."
             )
-
-def get_participant_service(
-    session: Session = Depends(db.get_db)
-) -> ParticipantService:
-    """
-    Dependency injector for ParticipantService.
-
-    Args:
-        session: The database session.
-    Returns:
-        An instance of ParticipantService.
-    """
-    logger.debug("Providing ParticipantService via DI")
-    return ParticipantService(session=session)
