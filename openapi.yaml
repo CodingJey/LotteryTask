@@ -1,0 +1,314 @@
+openapi: 3.1.0
+info:
+  title: JS Programming Labs
+  description: server side backend renderer
+  version: 1.0.0
+paths:
+  /lottery/v1/participant:
+    get:
+      tags:
+        - lottery
+      summary: Get Participants List
+      description: Retrieve all participants.
+      operationId: get_participants_list_lottery_v1_participant_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ParticipantResponse'
+                type: array
+                title: Response Get Participants List Lottery V1 Participant Get
+    post:
+      tags:
+        - lottery
+      summary: Create Ballot
+      description: Registers a new participant. Raises 400 if already exists.
+      operationId: create_ballot_lottery_v1_participant_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParticipantCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /lottery/v1/participant/{user_id}:
+    get:
+      tags:
+        - lottery
+      summary: Get Participant By Id
+      description: Retrieve participant by id.
+      operationId: get_participant_by_id_lottery_v1_participant__user_id__get
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            title: User Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/ParticipantResponse'
+                  - type: 'null'
+                title: Response Get Participant By Id Lottery V1 Participant  User Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /lottery/v1/lottery/close:
+    post:
+      tags:
+        - lottery
+      summary: Close Lottery And Draw
+      description: Registers a new ballot. Raises 400 if already exists.
+      operationId: close_lottery_and_draw_lottery_v1_lottery_close_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WinningBallotResponse'
+  /lottery/v1/ballot/{user_id}:
+    post:
+      tags:
+        - lottery
+      summary: Create Ballot
+      description: Registers a new ballot. Raises 400 if already exists.
+      operationId: create_ballot_lottery_v1_ballot__user_id__post
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            title: User Id
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BallotResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /lottery/v1/ballot:
+    get:
+      tags:
+        - lottery
+      summary: List Ballots By User
+      description: Lists Ballots by UserID. Raises 404 if list is empty.
+      operationId: list_ballots_by_user_lottery_v1_ballot_get
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            title: User Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BallotResponse'
+                title: Response List Ballots By User Lottery V1 Ballot Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /lottery/v1/winner-ballot:
+    get:
+      tags:
+        - lottery
+      summary: Get Winner By Winning Date
+      description: Registers a new ballot. Raises 400 if already exists.
+      operationId: get_winner_by_winning_date_lottery_v1_winner_ballot_get
+      parameters:
+        - name: winning_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            title: Winning Date
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WinningBallotResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    BallotResponse:
+      properties:
+        ballot_id:
+          type: integer
+          title: Ballot Id
+          description: Primary key of the ballot
+        user_id:
+          type: integer
+          title: User Id
+          description: ID of the Participant who owns this ballot
+        lottery_id:
+          type: integer
+          title: Lottery Id
+          description: ID of the Lottery this ballot belongs to
+        ballot_number:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Ballot Number
+          description: Number assigned to the ballot. Can be None.
+        expiry_date:
+          anyOf:
+            - type: string
+              format: date
+            - type: 'null'
+          title: Expiry Date
+          description: Date when this ballot expires. Can be None.
+      type: object
+      required:
+        - ballot_id
+        - user_id
+        - lottery_id
+      title: BallotResponse
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    ParticipantCreate:
+      properties:
+        first_name:
+          type: string
+          title: First Name
+          example: Alice
+        last_name:
+          type: string
+          title: Last Name
+          example: Smith
+        birth_date:
+          type: string
+          format: date
+          title: Birth Date
+      type: object
+      required:
+        - first_name
+        - last_name
+        - birth_date
+      title: ParticipantCreate
+    ParticipantResponse:
+      properties:
+        user_id:
+          type: integer
+          title: User Id
+          example: 231
+        first_name:
+          type: string
+          title: First Name
+          example: Alice
+        last_name:
+          type: string
+          title: Last Name
+          example: Smith
+        birth_date:
+          type: string
+          format: date
+          title: Birth Date
+      type: object
+      required:
+        - user_id
+        - first_name
+        - last_name
+        - birth_date
+      title: ParticipantResponse
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+              - type: string
+              - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+        - loc
+        - msg
+        - type
+      title: ValidationError
+    WinningBallotResponse:
+      properties:
+        lottery_id:
+          type: integer
+          title: Lottery Id
+          example: '123'
+        ballot_id:
+          type: integer
+          title: Ballot Id
+          example: '123'
+        winning_date:
+          type: string
+          format: date
+          title: Winning Date
+          example: '2025-05-15'
+        winning_amount:
+          type: integer
+          title: Winning Amount
+          example: '123'
+      type: object
+      required:
+        - lottery_id
+        - ballot_id
+        - winning_date
+        - winning_amount
+      title: WinningBallotResponse
+
