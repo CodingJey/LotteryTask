@@ -9,7 +9,7 @@ from app.schemas.ballots import (BallotCreate, BallotResponse)
 router = APIRouter()
 
 @router.post("/participant", response_model=ParticipantResponse, status_code=201)
-def register_participant(
+def create_ballot(
     participant_in: ParticipantCreate,
     service: ParticipantService = Depends(get_participant_service),
 ):

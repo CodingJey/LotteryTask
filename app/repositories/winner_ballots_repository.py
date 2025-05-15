@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 import logging 
 from typing import Optional, List
+from datetime import date 
 
 logger = logging.getLogger("app")
 
@@ -16,16 +17,14 @@ class WinningBallotRepository(BaseRepository[WinningBallot]):
         self,
         lottery_id: int,
         ballot_id: int,
-        winning_date: str,
-        winning_amount: float
+        winning_date: date
     ) -> WinningBallot:
         """Create and persist a WinningBallot entry."""
         logger.debug(f"Recording winning ballot Lottery={lottery_id}, Ballot={ballot_id}")
-        winning = WinningBallot(
+        winning = self._init_winning_ballot(
             lottery_id=lottery_id,
             ballot_id=ballot_id,
-            WinningDate=winning_date,
-            WinningAmount=winning_amount
+            winning_date=winning_date
         )
         self.session.add(winning)
         self.session.commit()
@@ -51,7 +50,7 @@ class WinningBallotRepository(BaseRepository[WinningBallot]):
         """List all winning ballots."""
         return self.list_all()
 
-    def _init_winning_ballot(self, lottery_id: int, ballot_id: int, winning_date: str) -> WinningBallot:
+    def _init_winning_ballot(self, lottery_id: int, ballot_id: int, winning_date: date) -> WinningBallot:
         w = self.model()
         w.lottery_id = lottery_id
         w.ballot_id = ballot_id

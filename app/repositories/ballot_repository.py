@@ -18,19 +18,19 @@ class BallotRepository(BaseRepository[Ballot]):
         self,
         user_id: int,
         lottery_id: int,
-        ExpiryDate: date
+        expiry_date: date
     ) -> Ballot:
         """Create and persist a new Ballot."""
         logger.debug(f"Creating Ballot for User={user_id}, Lottery={lottery_id}")
         ballot = self._init_ballot(
             user_id=user_id,
             lottery_id=lottery_id,
-            ExpiryDate=ExpiryDate
+            expiry_date=expiry_date
         )
         self.session.add(ballot)
         self.session.commit()
         self.session.refresh(ballot)
-        logger.info(f"Created Ballot with ID={ballot.BallotID}")
+        logger.info(f"Created Ballot with ID={ballot.ballot_id}")
         return ballot
 
     def get_ballot(self, ballot_id: int) -> Optional[Ballot]:
@@ -51,12 +51,12 @@ class BallotRepository(BaseRepository[Ballot]):
         result = self.session.execute(stmt)
         return result.scalars().all()
 
-    def _init_ballot(self, user_id: int, lottery_id: int,  ExpiryDate: date) -> Ballot:
+    def _init_ballot(self, user_id: int, lottery_id: int,  expiry_date: date) -> Ballot:
         b = self.model()
         b.user_id = user_id
         b.lottery_id = lottery_id
-        b.BallotNumber = ''.join(random.choices(string.digits, k=10))
-        b.ExpiryDate = ExpiryDate
+        b.ballot_number = ''.join(random.choices(string.digits, k=10))
+        b.expiry_date = expiry_date
         return b
 
 def get_ballot_repository(session: Session) -> BallotRepository:

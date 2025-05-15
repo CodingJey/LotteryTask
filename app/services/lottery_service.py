@@ -51,53 +51,13 @@ class LotteryService:
         logger.debug("Initialized LotteryService with repos: %s, %s, %s, %s",
                      self.participant_repo, self.lottery_repo, self.ballot_repo, self.winning_repo)
 
-    def register_participant(
-        self, request: ParticipantCreate
-    ) -> ParticipantResponse:
-        """
-        Registers a new lottery participant.
-        Raises HTTPException if a participant with the same first name already exists.
-        """
-        logger.info("Attempting to register participant: %s %s", request.first_name, request.last_name)
-        existing_participant: Optional[Participant] = self.participant_repo.get_by_first_name(first_name=request.first_name)
-
-        if existing_participant:
-            # Log with more details if possible, e.g., existing_participant.UserID if available
-            logger.warning(
-                "Registration failed: participant with name '%s' already exists. Requested for: %s %s",
-                request.first_name, request.last_name, request.birth_date
-            )
-            # If participant exists, raise HTTPException and stop execution
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Participant with name '{request.first_name}' already exists."
-            )
-
-        try:
-            new_participant_model = self.participant_repo.create_participant(
-                first_name=request.first_name,
-                last_name=request.last_name,
-                birth_date=request.birth_date
-            )
-            response = ParticipantResponse.model_validate(new_participant_model)
-            logger.info("Participant created successfully: UserID %s, Name: %s %s",
-                        response.user_id, response.first_name, response.last_name)
-            return response
-        except Exception as e: 
-            logger.error(
-                "Error during participant creation for %s %s: %s",
-                request.first_name, request.last_name, str(e), exc_info=True 
-            )
-            raise HTTPException(
-                status_code=500,  # Internal Server Error
-                detail="An unexpected error occurred while creating the participant."
-            )
     
-    def submit_ballot(self, user_id: int) -> BallotResponse:
+    def create_ballot(self, user_id: int) -> BallotResponse:
         """
         Submits a new ballot for today's lottery; creates the lottery if missing.
         """
-        today: date = date.today()
+        # FIXME: REMOVE TIMEDELTA FROM HERE TO GET CORRECT BEHAVIOUR THIS IS ONLY FOR DEV PURPOSES
+        today: date = date.today() - timedelta(days=1)
         logger.info("Submitting ballot for user %s on %s", user_id, today)
 
         lottery: Optional[Lottery] = self.lottery_repo.get_by_date(today)
@@ -113,7 +73,7 @@ class LotteryService:
                 detail="Lottery is already closed for today",
             )
 
-        ballot = self.ballot_repo.create_ballot(user_id=user_id, lottery_id=lottery.lottery_id, ExpiryDate=today)
+        ballot = self.ballot_repo.create_ballot(user_id=user_id, lottery_id=lottery.lottery_id, expiry_date=today)
 
         response = BallotResponse.model_validate(ballot)
         logger.info("Ballot submitted: %s for lottery %s (user %s)",

@@ -1,7 +1,8 @@
 from fastapi import APIRouter
-from app.apis.routes import participant_routes
+from app.apis.routes import participant_routes, lottery_routes
 
 main_router = APIRouter(prefix="/lottery/v1", tags=["lottery"])
 
 #Adding routes to Main Router
 main_router.include_router(participant_routes.router)
+main_router.include_router(lottery_routes.router)

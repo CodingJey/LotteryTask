@@ -19,7 +19,7 @@ class LotteryRepository(BaseRepository[Lottery]):
             return None
         self.session.add(lottery)
         self.session.commit()
-        logger.info(f"Created Lottery with ID={lottery.LotteryID}")
+        logger.info(f"Created Lottery with ID={lottery.lottery_id}")
         return self._refresh(lottery)
 
     def get_by_date(self, target_date: date) -> Optional[Lottery]:
@@ -28,11 +28,11 @@ class LotteryRepository(BaseRepository[Lottery]):
         Returns None if no such lottery exists.
         """
         logger.debug(f"Fetching Lottery with Date={target_date}")
-        stmt = select(self.model).where(self.model.Date == target_date)
+        stmt = select(self.model).where(self.model.lottery_date == target_date)
         result = self.session.execute(stmt)
         lottery = result.scalars().first()
         if lottery:
-            logger.info(f"Found Lottery ID={lottery.LotteryID} for Date={target_date}")
+            logger.info(f"Found Lottery ID={lottery.lottery_id} for Date={target_date}")
         else:
             logger.warning(f"No Lottery found for Date={target_date}")
         return lottery
@@ -45,10 +45,10 @@ class LotteryRepository(BaseRepository[Lottery]):
 
     def _init_lottery(self, input_date: date, closed: bool) -> Optional[Lottery]:
         l = self.model()
-        l.LotteryDate = input_date
+        l.lottery_date = input_date
         if closed:
             return None
-        l.Closed = closed
+        l.closed = closed
         return l
 
 def get_lottery_repository(session: Session
