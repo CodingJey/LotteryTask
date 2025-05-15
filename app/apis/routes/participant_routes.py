@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import date
-from typing import List
+from typing import List, Optional
 
 from app.services.participant_service import ParticipantService, get_participant_service
 from app.schemas.participant import ( ParticipantCreate, ParticipantResponse )
@@ -29,14 +29,15 @@ def get_participants_list(
     return participants
 
 
-@router.get("/participant/{user_id}", response_model=List[ParticipantResponse])
+@router.get("/participant/{user_id}", response_model=Optional[ParticipantResponse])
 def get_participant_by_id(
+    user_id : int,
     service: ParticipantService = Depends(get_participant_service)
 ):
     """
-    Retrieve all participants.
+    Retrieve participant by id.
     """
-    participants = service.list_all_participants()
+    participants = service.get_participant_by_id(user_id=user_id)
     return participants
 
 

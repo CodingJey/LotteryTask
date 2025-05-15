@@ -22,7 +22,7 @@ class ParticipantRepository(BaseRepository[Participant]):
         logger.info(f"Created Participant with ID={participant.user_id}")
         return participant
 
-    def get_participant(self, user_id: int) -> Optional[Participant]:
+    def get_participant_by_id(self, user_id: int) -> Optional[Participant]:
         """Retrieve a Participant by its primary key."""
         return self.get(user_id)
 

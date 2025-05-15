@@ -106,7 +106,6 @@ class ParticipantService:
         try:
             participants_models: List[Participant] = self.participant_repo.list_participants()
             
-            # Convert list of ORM models to list of Pydantic response models
             response_list = [ParticipantResponse.model_validate(p) for p in participants_models]
             
             logger.info(f"Successfully retrieved {len(response_list)} participants.")
@@ -115,8 +114,38 @@ class ParticipantService:
             logger.error(
                 "Error during listing all participants: %s", str(e), exc_info=True
             )
-            # It's generally good practice to not expose raw error details to the client
-            # unless it's a development environment or specific debugging need.
+            raise HTTPException(
+                status_code=500,
+                detail="An unexpected error occurred while retrieving participants."
+            )
+
+    def get_participant_by_id(self, user_id: int) -> Optional[ParticipantResponse]:
+        """
+        Retrieves a list of all registered participants.
+
+        Returns:
+            A list of participant details. Returns an empty list if no participants are found.
+        
+        Raises:
+            HTTPException: If an unexpected error occurs during retrieval (status 500).
+        """
+        logger.info("Attempting to retrieve all participants.")
+        try:
+            participants_models: Optional[Participant] = self.participant_repo.get_participant_by_id(user_id=user_id)
+            if participants_models:
+                response = ParticipantResponse.model_validate(participants_models)
+                
+                logger.info(f"Successfully retrieved participants.")
+                return response
+            else:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Participant not found."
+                    )
+        except Exception as e:
+            logger.error(
+                "Error during listing all participants: %s", str(e), exc_info=True
+            )
             raise HTTPException(
                 status_code=500,
                 detail="An unexpected error occurred while retrieving participants."
