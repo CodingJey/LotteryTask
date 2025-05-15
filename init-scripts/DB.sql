@@ -24,9 +24,10 @@ CREATE TABLE WinningBallots (
     lottery_id INTEGER PRIMARY KEY, 
     ballot_id INTEGER NOT NULL UNIQUE, 
     winning_date DATE NOT NULL,
-    winning_amount DECIMAL(100, 2) NOT NULL,
+    winning_amount INTEGER NOT NULL,
     CONSTRAINT fk_lottery_win FOREIGN KEY (lottery_id) REFERENCES Lotteries(lottery_id),
-    CONSTRAINT fk_ballot_win FOREIGN KEY (ballot_id) REFERENCES Ballots(ballot_id)
+    CONSTRAINT fk_ballot_win FOREIGN KEY (ballot_id) REFERENCES Ballots(ballot_id),
+    CONSTRAINT chk_winning_amount_range CHECK (winning_amount > 0 AND winning_amount <= 100)
 );
 
 -- Indexes remain conceptually the same, referencing integer columns now

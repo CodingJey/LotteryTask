@@ -14,6 +14,14 @@ class BallotRepository(BaseRepository[Ballot]):
     def __init__(self, session: Session):
         super().__init__(session, Ballot)
 
+    def _init_ballot(self, user_id: int, lottery_id: int,  expiry_date: date) -> Ballot:
+        b = self.model()
+        b.user_id = user_id
+        b.lottery_id = lottery_id
+        b.ballot_number = ''.join(random.choices(string.digits, k=10))
+        b.expiry_date = expiry_date
+        return b
+
     def create_ballot(
         self,
         user_id: int,
@@ -50,14 +58,6 @@ class BallotRepository(BaseRepository[Ballot]):
         stmt = select(Ballot).where(Ballot.lottery_id == lottery_id)
         result = self.session.execute(stmt)
         return result.scalars().all()
-
-    def _init_ballot(self, user_id: int, lottery_id: int,  expiry_date: date) -> Ballot:
-        b = self.model()
-        b.user_id = user_id
-        b.lottery_id = lottery_id
-        b.ballot_number = ''.join(random.choices(string.digits, k=10))
-        b.expiry_date = expiry_date
-        return b
 
 def get_ballot_repository(session: Session) -> BallotRepository:
     return BallotRepository(session)

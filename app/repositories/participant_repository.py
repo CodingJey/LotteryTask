@@ -12,6 +12,13 @@ class ParticipantRepository(BaseRepository[Participant]):
     def __init__(self, session: Session):
         super().__init__(session, Participant)
 
+    def _init_participant(self, first_name: str, last_name: str, birth_date: date) -> Participant:
+        p = self.model()
+        p.first_name = first_name
+        p.last_name = last_name
+        p.birth_date = birth_date
+        return p
+
     def create_participant(self, first_name: str, last_name: str, birth_date: date) -> Participant:
         """Create and persist a new Participant."""
         logger.debug(f"Creating Participant: {first_name} {last_name}")
@@ -36,13 +43,6 @@ class ParticipantRepository(BaseRepository[Participant]):
     def list_participants(self) -> List[Participant]:
         """List all participants."""
         return self.list_all()
-
-    def _init_participant(self, first_name: str, last_name: str, birth_date: date) -> Participant:
-        p = self.model()
-        p.first_name = first_name
-        p.last_name = last_name
-        p.birth_date = birth_date
-        return p
 
 
 def get_participant_repository(session: Session) -> ParticipantRepository:
