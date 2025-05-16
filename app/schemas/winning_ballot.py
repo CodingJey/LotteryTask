@@ -9,7 +9,6 @@ class WinningBallotBase(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-
 class WinningBallotResponse(WinningBallotBase):
     lottery_id: int = Field(..., example="123")
     ballot_id: int = Field(..., example="123")

@@ -105,13 +105,9 @@ def get_lottery(
     Raises:
     - `404 Not Found`: If the lottery with the given ID does not exist.
     """
-    try:
-        logger.debug(f"API: Fetching lottery by ID: {lottery_id}")
-        lottery = service.get_lottery(lottery_id)
-        return lottery
-    except LotteryNotFoundError as e:
-        logger.warning(f"API Error: {str(e)}")
-        raise HTTPException(status_code=404, detail=str(e))
+    logger.debug(f"API: Fetching lottery by ID: {lottery_id}")
+    lottery = service.get_lottery(lottery_id)
+    return lottery
 
 @router.get("/by-date/{target_date}",
              response_model=LotteryResponse,
@@ -126,11 +122,7 @@ def get_lottery_by_date(
     Raises:
     - `404 Not Found`: If no lottery exists for the given date.
     """
-    try:
-        logger.debug(f"API: Fetching lottery by date: {target_date}")
-        lottery = service.get_lottery_by_target_date(target_date)
-        return lottery
-    except LotteryNotFoundError as e:
-        logger.warning(f"API Error: {str(e)}")
-        raise HTTPException(status_code=404, detail=str(e))
+    logger.debug(f"API: Fetching lottery by date: {target_date}")
+    lottery = service.get_lottery_by_target_date(target_date)
+    return lottery
 

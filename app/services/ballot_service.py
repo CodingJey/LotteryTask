@@ -34,7 +34,6 @@ from app.middleware.exceptions.ballot_service_exceptions import (
     BallotsNotFoundErrorForUser
 )
 from app.middleware.exceptions.lottery_service_exceptions import (
-    LotteryClosedError,
     LotteryCreationError as LotteryServiceCreationError
 )
 logger = logging.getLogger("app")

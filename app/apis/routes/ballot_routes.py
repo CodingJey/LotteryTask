@@ -1,6 +1,4 @@
-from app.models.winning_ballots import WinningBallot
-from fastapi import APIRouter, Depends, HTTPException
-from datetime import date
+from fastapi import APIRouter, Depends
 from typing import List
 
 from app.services.ballot_service import BallotService
@@ -21,7 +19,7 @@ def create_ballot(
     """
     return service.create_ballot(user_id=user_id)
 
-@router.post("/ballot/{user_id}", 
+@router.post("/ballot", 
              response_model=BallotResponse,
              status_code=201,
              summary="Create a new ballot with a specific expiry date")
