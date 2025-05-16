@@ -43,6 +43,25 @@ class BallotRepository(BaseRepository[Ballot], BallotRepositoryInterface):
         logger.info(f"Created Ballot with ID={ballot.ballot_id}")
         return ballot
 
+    def create_ballot_with_date(
+        self,
+        user_id: int,
+        lottery_id: int,
+        expiry_date: date
+    ) -> Ballot:
+        """Create and persist a new Ballot."""
+        logger.debug(f"Creating Ballot for User={user_id}, Lottery={lottery_id}")
+        ballot = self._init_ballot(
+            user_id=user_id,
+            lottery_id=lottery_id,
+            expiry_date=expiry_date
+        )
+        self.session.add(ballot)
+        self.session.commit()
+        self.session.refresh(ballot)
+        logger.info(f"Created Ballot with ID={ballot.ballot_id}")
+        return ballot
+
     def get_ballot(self, ballot_id: int) -> Optional[Ballot]:
         """Retrieve a ballot by its primary key."""
         return self.get(ballot_id)

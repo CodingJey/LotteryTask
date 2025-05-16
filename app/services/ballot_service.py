@@ -2,7 +2,7 @@ import logging
 from datetime import date, timedelta
 from typing import Optional, List
 import random
-from app.schemas.ballots import BallotResponse
+from app.schemas.ballots import BallotResponse, BallotCreate
 from app.schemas.participant import ParticipantResponse
 from fastapi import Depends,HTTPException
 from sqlalchemy.orm import Session
@@ -28,10 +28,16 @@ from app.models.ballot import (
 from app.models.lottery import (
     Lottery,
 )
-
-logger = logging.getLogger("app.lottery")
-logger.setLevel(logging.INFO)
-
+from app.middleware.exceptions.ballot_service_exceptions import (
+    BallotServiceError,
+    BallotCreationError,
+    BallotsNotFoundErrorForUser
+)
+from app.middleware.exceptions.lottery_service_exceptions import (
+    LotteryClosedError,
+    LotteryCreationError as LotteryServiceCreationError
+)
+logger = logging.getLogger("app")
 
 class BallotService:
     def __init__(
@@ -49,41 +55,100 @@ class BallotService:
         logger.debug("Initialized LotteryService with repos: %s, %s, %s, %s",
                      self.participant_repo, self.lottery_repo, self.ballot_repo, self.winning_repo)
 
+    def _get_or_create_lottery_for_ballot(self, target_date: date) -> Lottery:
+        """
+        Helper to get an existing open lottery for a date, or create one if it doesn't exist.
+        Raises:
+            LotteryServiceCreationError: If lottery creation fails.
+        """
+        lottery: Optional[Lottery] = self.lottery_repo.get_by_date(target_date)
+        if not lottery:
+            logger.debug("No lottery found for %s, creating new one for ballot submission.", target_date)
+            try:
+                lottery = self.lottery_repo.create_lottery(input_date=target_date)
+                if not lottery:
+                    raise LotteryServiceCreationError(target_date, "Repository returned None during implicit creation.")
+                logger.info("Implicitly created lottery %s for date %s", lottery.lottery_id, target_date)
+            except Exception as e: 
+                logger.error(f"Implicit lottery creation failed for ballot on date {target_date}: {e}")
+                raise LotteryServiceCreationError(target_date, f"Implicit creation failed: {str(e)}")
+        return lottery
+
     
     def create_ballot(self, user_id: int) -> BallotResponse:
         """
         Submits a new ballot for today's lottery; creates the lottery if missing.
         """
         # FIXME: REMOVE TIMEDELTA FROM HERE TO GET CORRECT BEHAVIOUR THIS IS ONLY FOR DEV PURPOSES
-        today: date = date.today() - timedelta(days=1)
-        logger.info("Submitting ballot for user %s on %s", user_id, today)
+        target_date: date = date.today() - timedelta(days=1)
+        logger.info("Submitting ballot for user %s on %s", user_id, target_date)
 
-        lottery: Optional[Lottery] = self.lottery_repo.get_by_date(today)
-        if not lottery:
-            logger.debug("No lottery found for %s, creating new one", today)
-            lottery = self.lottery_repo.create_lottery(input_date=today)
-            logger.info("Created lottery %s for date %s", lottery.lottery_id, today)
+        lottery = self._get_or_create_lottery_for_ballot(target_date)
 
-        if lottery is not None and lottery.closed:
-            logger.error("Attempt to submit to closed lottery %s", lottery.lottery_id)
-            raise HTTPException(
-                status_code=400,
-                detail="Lottery is already closed for today",
+        try:
+            ballot_model = self.ballot_repo.create_ballot(
+                user_id=user_id,
+                lottery_id=lottery.lottery_id,
+                expiry_date=target_date
             )
+            if not ballot_model:
+                raise BallotCreationError(user_id, lottery.lottery_id, "Repository returned None.")
+        except Exception as e:
+            logger.error(f"Ballot creation in repository failed for user {user_id}, lottery {lottery.lottery_id}: {e}")
+            raise BallotCreationError(user_id, lottery.lottery_id, str(e))
 
-        ballot = self.ballot_repo.create_ballot(user_id=user_id, lottery_id=lottery.lottery_id, expiry_date=today)
-
-        response = BallotResponse.model_validate(ballot)
-        logger.info("Ballot submitted: %s for lottery %s (user %s)",
-                ballot.ballot_id, lottery.lottery_id, user_id )
+        response = BallotResponse.model_validate(ballot_model)
+        logger.info("Ballot %s submitted successfully for lottery %s (user %s)",
+                    ballot_model.ballot_id, lottery.lottery_id, user_id)
         return response
 
-    def list_ballots_by_user(self, user_id : int) -> List[BallotResponse]:
+    def create_ballot_with_date(self, req : BallotCreate ) -> BallotResponse:
+        """
+        Submits a new ballot for today's lottery; creates the lottery if missing.
+        """
+        # FIXME: REMOVE TIMEDELTA FROM HERE TO GET CORRECT BEHAVIOUR THIS IS ONLY FOR DEV PURPOSES
+        today: date = date.today() - timedelta(days=1)
+        logger.info("Submitting ballot for user %s on %s", req.user_id, today)
+    
+        lottery: Optional[Lottery] = self.lottery_repo.get_by_date(req.expiry_date)
         try:
-            ballot_models : List[Ballot] =  self.ballot_repo.list_by_user(user_id=user_id)
+            ballot_model = self.ballot_repo.create_ballot(
+                user_id=req.user_id,
+                lottery_id=lottery.lottery_id,
+                expiry_date=req.target_date
+            )
+            if not ballot_model:
+                raise BallotCreationError(req.user_id, lottery.lottery_id, "Repository returned None.")
+        except Exception as e:
+            logger.error(f"Ballot creation in repository failed for user {req.user_id}, lottery {lottery.lottery_id}: {e}")
+            raise BallotCreationError(req.user_id, lottery.lottery_id, str(e))
+
+        response = BallotResponse.model_validate(ballot_model)
+        logger.info("Ballot %s submitted successfully for lottery %s (user %s)",
+                    ballot_model.ballot_id, lottery.lottery_id, req.user_id)
+        return response
+
+    def list_ballots_by_user(self, user_id: int) -> List[BallotResponse]:
+        """
+        Lists all ballots submitted by a given user.
+        Raises:
+            BallotsNotFoundErrorForUser: If the user has no registered ballots.
+            BallotServiceError: For other repository/listing errors.
+        """
+        logger.debug(f"Listing ballots for user ID: {user_id}")
+        try:
+            ballot_models: List[Ballot] = self.ballot_repo.list_by_user(user_id=user_id)
+            if not ballot_models: # Check if the list is empty
+                logger.info(f"No ballots found for user ID {user_id}.")
+                raise BallotsNotFoundErrorForUser(user_id=user_id)
+
             ballot_list = [BallotResponse.model_validate(p) for p in ballot_models]
-            if not ballot_list:
-                raise ValueError("participant has no registered ballots")
+            logger.info(f"Found {len(ballot_list)} ballots for user ID {user_id}.")
             return ballot_list
-        except:
-            raise HTTPException(status_code=404, detail="No ballots found for this user")
+        except BallotsNotFoundErrorForUser: 
+            raise
+        except Exception as e: 
+            logger.error(f"Error listing ballots for user {user_id}: {e}")
+            raise BallotServiceError(f"Could not retrieve ballots for user {user_id}: {str(e)}")
+
+

@@ -11,9 +11,15 @@ from app.repositories.interfaces.participant_repo_interface import ParticipantRe
 from app.schemas.participant import (
     ParticipantCreate, ParticipantResponse,
 )
+from app.middleware.exceptions.participant_service_exceptions import (
+    ParticipantServiceError,
+    ParticipantNotFoundError,
+    ParticipantAlreadyExistsError,
+    ParticipantCreationError,
+    ParticipantListingError
+)
 
-logger = logging.getLogger("app.participant_service")
-logger.setLevel(logging.INFO)
+logger = logging.getLogger("app")
 
 class ParticipantService:
     """
@@ -26,9 +32,6 @@ class ParticipantService:
         ) -> None:
         """
         Initializes the ParticipantService.
-
-        Args:
-            session: The database session.
         """
         self.ballot_repo : BallotRepositoryInterface = ballot_repo
         self.participant_repo: ParticipantRepositoryInterface = participant_repo
@@ -40,10 +43,6 @@ class ParticipantService:
         """
         Registers a new lottery participant.
 
-        Checks if a participant with the same first name already exists.
-        If a participant exists, raises an HTTPException.
-        Otherwise, creates the participant and returns their details.
-
         Args:
             request: The participant creation request data.
 
@@ -51,46 +50,59 @@ class ParticipantService:
             The created participant's details.
 
         Raises:
-            HTTPException: If a participant with the same first name already exists (status 400)
-                           or if an unexpected error occurs during creation (status 500).
+            ParticipantAlreadyExistsError: If a participant with the same first name already exists.
+            ParticipantCreationError: If an unexpected error occurs during creation.
         """
         logger.info("Attempting to register participant: %s %s", request.first_name, request.last_name)
-        
-        # Check if a participant with the given first name already exists
-        existing_participant: Optional[Participant] = self.participant_repo.get_by_first_name(
-            first_name=request.first_name
-        )
 
-        if existing_participant:
-            logger.warning(
-                "Registration failed: participant with first name '%s' already exists. Requested for: %s %s, DOB: %s",
-                request.first_name, request.first_name, request.last_name, request.birth_date
+        try:
+            existing_participant: Optional[Participant] = self.participant_repo.get_by_first_name(
+                first_name=request.first_name
             )
-            raise HTTPException(
-                status_code=400,  # Bad Request
-                detail=f"Participant with first name '{request.first_name}' already exists."
+
+            if existing_participant:
+                logger.warning(
+                    "Registration failed: participant with first name '%s' already exists. Requested for: %s %s, DOB: %s",
+                    request.first_name, request.first_name, request.last_name, request.birth_date
+                )
+                raise ParticipantAlreadyExistsError(
+                    identifier_field="first name",
+                    identifier_value=request.first_name
+                )
+        except ParticipantAlreadyExistsError:
+            raise # Re-raise the specific error
+        except Exception as e:
+            logger.error(
+                "Error during pre-check for participant %s %s: %s",
+                request.first_name, request.last_name, str(e), exc_info=True
+            )
+            raise ParticipantServiceError(
+                message=f"Failed during existence check for participant {request.first_name}: {str(e)}",
+                operation="register_participant_check"
             )
 
         try:
-            # Create the new participant
             new_participant_model = self.participant_repo.create_participant(
                 first_name=request.first_name,
                 last_name=request.last_name,
                 birth_date=request.birth_date
             )
-            # Validate and return the response
+            if new_participant_model is None: # Should be handled by repo raising error
+                raise ParticipantCreationError(
+                    request.first_name, request.last_name, "Repository returned None."
+                )
+
             response = ParticipantResponse.model_validate(new_participant_model)
             logger.info("Participant created successfully: UserID %s, Name: %s %s",
                         response.user_id, response.first_name, response.last_name)
             return response
-        except Exception as e:
+        except Exception as e: 
             logger.error(
                 "Error during participant creation for %s %s: %s",
                 request.first_name, request.last_name, str(e), exc_info=True
             )
-            raise HTTPException(
-                status_code=500,  # Internal Server Error
-                detail="An unexpected error occurred while creating the participant."
+            raise ParticipantCreationError(
+                request.first_name, request.last_name, reason=str(e)
             )
 
     def list_all_participants(self) -> List[ParticipantResponse]:
@@ -101,7 +113,7 @@ class ParticipantService:
             A list of participant details. Returns an empty list if no participants are found.
         
         Raises:
-            HTTPException: If an unexpected error occurs during retrieval (status 500).
+            ParticipantListingError: If an unexpected error occurs during retrieval.
         """
         logger.info("Attempting to retrieve all participants.")
         try:
@@ -115,39 +127,40 @@ class ParticipantService:
             logger.error(
                 "Error during listing all participants: %s", str(e), exc_info=True
             )
-            raise HTTPException(
-                status_code=500,
-                detail="An unexpected error occurred while retrieving participants."
-            )
+            raise ParticipantListingError(reason=str(e))
 
-    def get_participant_by_id(self, user_id: int) -> Optional[ParticipantResponse]:
+    def get_participant_by_id(self, user_id: int) -> ParticipantResponse:
         """
-        Retrieves a list of all registered participants.
+        Retrieves a participant by their unique ID.
+
+        Args:
+            user_id: The ID of the participant to retrieve.
 
         Returns:
-            A list of participant details. Returns an empty list if no participants are found.
+            The participant's details.
         
         Raises:
-            HTTPException: If an unexpected error occurs during retrieval (status 500).
+            ParticipantNotFoundError: If no participant is found with the given ID.
+            ParticipantServiceError: For other unexpected errors during retrieval.
         """
-        logger.info("Attempting to retrieve all participants.")
+        logger.info(f"Attempting to retrieve participant by ID: {user_id}")
         try:
-            participants_models: Optional[Participant] = self.participant_repo.get_participant_by_id(user_id=user_id)
-            if participants_models:
-                response = ParticipantResponse.model_validate(participants_models)
-                
-                logger.info(f"Successfully retrieved participants.")
-                return response
-            else:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Participant not found."
-                    )
+            participant_model: Optional[Participant] = self.participant_repo.get_participant_by_id(user_id=user_id)
+            
+            if participant_model is None:
+                logger.warning(f"Participant with ID {user_id} not found.")
+                raise ParticipantNotFoundError(identifier=user_id)
+
+            response = ParticipantResponse.model_validate(participant_model)
+            logger.info(f"Successfully retrieved participant ID {user_id}: {response.first_name} {response.last_name}")
+            return response
+        except ParticipantNotFoundError:
+            raise
         except Exception as e:
             logger.error(
-                "Error during listing all participants: %s", str(e), exc_info=True
+                f"Error retrieving participant by ID {user_id}: {str(e)}", exc_info=True
             )
-            raise HTTPException(
-                status_code=500,
-                detail="An unexpected error occurred while retrieving participants."
+            raise ParticipantServiceError(
+                message=f"An unexpected error occurred while retrieving participant ID {user_id}: {str(e)}",
+                operation="get_participant_by_id"
             )

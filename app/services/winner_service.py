@@ -8,7 +8,13 @@ from app.schemas.winning_ballot import WinningBallotResponse
 from app.repositories.winner_ballots_repository import (
      get_winning_ballot_repository_provider,
 )
-logger = logging.getLogger(__name__)
+from app.middleware.exceptions.winner_service_exceptions import (
+    WinnerServiceError,
+    WinnerNotFoundError,
+    WinnerListingError,
+)
+
+logger = logging.getLogger("app")
 
 class WinnerService:
     def __init__(
@@ -18,68 +24,80 @@ class WinnerService:
         self.winning_repo = winning_repo
         logger.debug("Initialized WinnerService")
 
-    def record_new_winner(
-        self, lottery_id: int, ballot_id: int, winning_date: date
-    ) -> WinningBallotResponse:
-        """
-        Creates and persists a new WinningBallot record.
-        This is called by LotteryService after a winner is drawn.
-        """
-        logger.info(
-            f"Recording new winner for LotteryID={lottery_id}, BallotID={ballot_id}, WinningDate={winning_date}"
-        )
-
-        win_record_model = self.winning_repo.create_winning_ballot(
-            lottery_id=lottery_id, ballot_id=ballot_id, winning_date=winning_date
-        )
-        # The original close_lottery_and_draw returned the model instance,
-        # but service methods should ideally return Pydantic schemas.
-        logger.info(
-            f"Successfully created WinningBallot (ID: {win_record_model.lottery_id}) for LotteryID={lottery_id}"
-        )
-        return WinningBallotResponse.model_validate(win_record_model)
 
     def get_winner_by_winning_date(self, winning_date: date) -> WinningBallotResponse:
         """
         Retrieves the winning ballot for a specific winning date.
-        (Moved from LotteryService)
+
+        Raises:
+            WinnerNotFoundError: If no winning ballot is found for the given date.
+            WinnerServiceError: For other unexpected errors during retrieval.
         """
-        logger.info(f"Retrieving winner for date {winning_date}")
-        win_model: Optional[WinningBallot] = self.winning_repo.get_by_winning_date(winning_date)
+        logger.info(f"Attempting to retrieve winner for date {winning_date}")
+        try:
+            win_model: Optional[WinningBallot] = self.winning_repo.get_by_winning_date(winning_date)
+        except Exception as e:
+            logger.error(f"Repository error while fetching winner for date {winning_date}: {str(e)}", exc_info=True)
+            raise WinnerServiceError(message=f"Failed to retrieve winner for date {winning_date} due to repository error: {str(e)}", operation="get_winner_by_winning_date")
+
         if not win_model:
             logger.warning(f"No winning record found for date {winning_date}")
-            raise HTTPException(
-                status_code=404,
-                detail="No winner found for that date",
-            )
+            raise WinnerNotFoundError(identifier=winning_date, operation="get_winner_by_winning_date")
+
         logger.info(
-            f"Found winning record (WinningBallotID: {win_model.lottery_id}) for date {winning_date}"
+            f"Found winning record (LotteryID: {win_model.lottery_id}, BallotID: {win_model.ballot_id}) for date {winning_date}"
         )
         return WinningBallotResponse.model_validate(win_model)
 
     def list_all_winning_ballots(self) -> List[WinningBallotResponse]:
         """
         Retrieves a list of all winning ballots with their details.
+        Returns an empty list if no winning ballots are found (does not raise error for empty list).
 
-        Returns:
-            A list of winning ballot details. Returns an empty list if no winning ballots are found.
-        
         Raises:
-            HTTPException: If an unexpected error occurs during retrieval (status 500).
+            WinnerListingError: If an unexpected error occurs during retrieval from the repository.
         """
         logger.info("Attempting to retrieve all winning ballots.")
         try:
             winning_ballots_models: List[WinningBallot] = self.winning_repo.list_winning_ballots()
             
-            response_list = [ WinningBallotResponse.model_validate(wb_model) for wb_model in winning_ballots_models ]
+            response_list = [
+                WinningBallotResponse.model_validate(wb_model) for wb_model in winning_ballots_models
+            ]
             
             logger.info(f"Successfully retrieved {len(response_list)} winning ballots.")
             return response_list
         except Exception as e:
             logger.error(
-                "Error during listing all winning ballots: %s", str(e), exc_info=True
+                f"Repository error during listing all winning ballots: {str(e)}", exc_info=True
             )
-            raise HTTPException(
-                status_code=500,
-                detail="An unexpected error occurred while retrieving winning ballots."
-            )
+            raise WinnerListingError(reason=str(e))
+
+    def get_winner_by_lottery_id(self, lottery_id: int) -> Optional[WinningBallotResponse]:
+        """
+        Retrieves the winning ballot for a specific lottery ID.
+        Returns None if not found, or raises WinnerNotFoundError if preferred.
+
+        Raises:
+            WinnerNotFoundError: If no winning ballot is found for the given lottery ID.
+            WinnerServiceError: For other unexpected errors during retrieval.
+        """
+        logger.info(f"Attempting to retrieve winner for LotteryID={lottery_id}")
+        try:
+            win_model: Optional[WinningBallot] = self.winning_repo.get_by_lottery(lottery_id)
+        except AttributeError:
+             logger.error(f"Repository method 'get_by_lottery_id' not found. Cannot fetch winner by lottery ID.")
+             raise WinnerServiceError(message="Underlying repository does not support fetching winner by lottery ID.", operation="get_winner_by_lottery_id")
+        except Exception as e:
+            logger.error(f"Repository error while fetching winner for LotteryID={lottery_id}: {str(e)}", exc_info=True)
+            raise WinnerServiceError(message=f"Failed to retrieve winner for LotteryID={lottery_id} due to repository error: {str(e)}", operation="get_winner_by_lottery_id")
+
+        if not win_model:
+            logger.warning(f"No winning record found for LotteryID={lottery_id}")
+            raise WinnerNotFoundError(identifier=lottery_id, operation="get_winner_by_lottery_id")
+        
+        logger.info(
+            f"Found winning record (BallotID: {win_model.ballot_id}) for LotteryID={lottery_id}"
+        )
+        return WinningBallotResponse.model_validate(win_model)
+            

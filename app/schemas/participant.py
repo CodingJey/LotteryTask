@@ -4,7 +4,7 @@ from datetime import date
 class ParticipantBase(BaseModel):
     first_name: str = Field(..., example="Alice")
     last_name: str = Field(..., example="Smith")
-    birth_date: date
+    birth_date: date = Field(..., example="2025-05-15")
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -15,6 +15,6 @@ class ParticipantResponse(BaseModel):
     user_id : int = Field(..., example=231)
     first_name: str = Field(..., example="Alice")
     last_name: str = Field(..., example="Smith")
-    birth_date: date
+    birth_date: date = Field(..., example="2025-05-15")
     
     model_config = ConfigDict(from_attributes=True)

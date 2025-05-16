@@ -7,18 +7,20 @@ from datetime import date
 class BallotBase(BaseModel):
     user_id: int = Field(..., description="ID of the Participant who owns this ballot")
     lottery_id: int = Field(..., description="ID of the Lottery this ballot belongs to")
-    ballot_number: Optional[int] = Field(None, description="Number assigned to the ballot. This field is optional.")
-    expiry_date: Optional[date] = Field(None, description="Date when this ballot expires. This field is optional.")
+    ballot_number: int = Field(None, description="Number assigned to the ballot. This field is optional.")
+    expiry_date: date = Field(None, example="2025-05-15", description="Date when this ballot expires. This field is optional.")
 
 class BallotCreate(BallotBase):
-    pass
+    user_id: int = Field(..., description="ID of the Participant who owns this ballot")
+    lottery_id: int = Field(..., description="ID of the Lottery this ballot belongs to")
+    expiry_date: date = Field(None, example="2025-05-15", description="Date when this ballot expires. This field is optional.")
 
 class BallotResponse(BaseModel):
     ballot_id: int = Field(..., description="Primary key of the ballot")
     user_id: int = Field(..., description="ID of the Participant who owns this ballot")
     lottery_id: int = Field(..., description="ID of the Lottery this ballot belongs to")
-    ballot_number: Optional[int] = Field(None, description="Number assigned to the ballot. Can be None.")
-    expiry_date: Optional[date] = Field(None, description="Date when this ballot expires. Can be None.")
+    ballot_number: int = Field(None, description="Number assigned to the ballot. Can be None.")
+    expiry_date: date = Field(None,example="2025-05-15", description="Date when this ballot expires. Can be None.")
 
     model_config = ConfigDict(from_attributes=True)
 
