@@ -34,7 +34,8 @@ from app.middleware.exceptions.ballot_service_exceptions import (
     BallotsNotFoundErrorForUser
 )
 from app.middleware.exceptions.lottery_service_exceptions import (
-    LotteryCreationError as LotteryServiceCreationError
+    LotteryCreationError as LotteryServiceCreationError,
+    LotteryNotFoundError
 )
 logger = logging.getLogger("app")
 
@@ -110,22 +111,25 @@ class BallotService:
         logger.info("Submitting ballot for user %s on %s", req.user_id, today)
     
         lottery: Optional[Lottery] = self.lottery_repo.get_by_date(req.expiry_date)
-        try:
-            ballot_model = self.ballot_repo.create_ballot(
-                user_id=req.user_id,
-                lottery_id=lottery.lottery_id,
-                expiry_date=req.target_date
-            )
-            if not ballot_model:
-                raise BallotCreationError(req.user_id, lottery.lottery_id, "Repository returned None.")
-        except Exception as e:
-            logger.error(f"Ballot creation in repository failed for user {req.user_id}, lottery {lottery.lottery_id}: {e}")
-            raise BallotCreationError(req.user_id, lottery.lottery_id, str(e))
+        if lottery:
+            try:
+                ballot_model = self.ballot_repo.create_ballot(
+                    user_id=req.user_id,
+                    lottery_id=lottery.lottery_id,
+                    expiry_date=req.target_date
+                )
+                if not ballot_model:
+                    raise BallotCreationError(req.user_id, lottery.lottery_id, "Repository returned None.")
+            except Exception as e:
+                logger.error(f"Ballot creation in repository failed for user {req.user_id}, lottery {lottery.lottery_id}: {e}")
+                raise BallotCreationError(req.user_id, lottery.lottery_id, str(e))
 
-        response = BallotResponse.model_validate(ballot_model)
-        logger.info("Ballot %s submitted successfully for lottery %s (user %s)",
-                    ballot_model.ballot_id, lottery.lottery_id, req.user_id)
-        return response
+            response = BallotResponse.model_validate(ballot_model)
+            logger.info("Ballot %s submitted successfully for lottery %s (user %s)",
+                        ballot_model.ballot_id, lottery.lottery_id, req.user_id)
+            return response
+        logger.error(f"Ballot creation in service failed for user {req.user_id}")
+        raise LotteryNotFoundError(identifier=req.expiry_date)
 
     def list_ballots_by_user(self, user_id: int) -> List[BallotResponse]:
         """
@@ -137,7 +141,7 @@ class BallotService:
         logger.debug(f"Listing ballots for user ID: {user_id}")
         try:
             ballot_models: List[Ballot] = self.ballot_repo.list_by_user(user_id=user_id)
-            if not ballot_models: # Check if the list is empty
+            if not ballot_models:
                 logger.info(f"No ballots found for user ID {user_id}.")
                 raise BallotsNotFoundErrorForUser(user_id=user_id)
 

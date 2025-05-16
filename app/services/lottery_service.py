@@ -58,43 +58,77 @@ class LotteryService:
                      self.participant_repo, self.lottery_repo, self.ballot_repo, self.winning_repo)
 
 
-    def close_lottery_and_draw(self) -> Optional[WinningBallotResponse]:
+    def close_lottery_and_draw(self) -> WinningBallotResponse: # Return type changed
         """
         Closes *yesterday’s* lottery (i.e., the one whose date was “today - 1 day”)
-        and selects a random winning ballot. Returns the winning record, or None if:
-          - no lottery existed for yesterday
-          - it was already closed
-          - there were no ballots
-        """
+        and selects a random winning ballot.
 
+        Note: This method relies on individual repository operations being atomic.
+        Data consistency across multiple distinct repository calls (e.g., creating
+        a winner, then closing the lottery) is not guaranteed by this method if an
+        operation fails mid-sequence.
+
+        Returns:
+            WinningBallotResponse: The details of the winning ballot if one is drawn.
+
+        Raises:
+            HTTPException (status_code=404): If no lottery existed for yesterday.
+            HTTPException (status_code=409): If the lottery for yesterday was already closed.
+            NoBallotsFoundError: If the lottery was successfully closed (by its repository call)
+                                 but had no ballots submitted.
+            WinnerPersistenceError: If saving the winning ballot record fails.
+            LotteryUpdateError: If updating the lottery's 'closed' status fails.
+            # Other underlying database exceptions might propagate if not caught by repository layers.
+        """
         closing_date = date.today() - timedelta(days=1)
-        logger.info("Running close_and_draw for lottery date %s", closing_date)
+        logger.info("Service: Attempting to close and draw for lottery date %s (session management ignored)", closing_date)
 
         lottery = self.lottery_repo.get_by_date(closing_date)
         if lottery is None:
-            logger.info("No lottery found for %s; skipping close", closing_date)
-            raise HTTPException(status_code=418, detail="No lottery found for given date")
+            logger.warning("Service: No lottery found for %s; cannot close or draw.", closing_date)
+            raise HTTPException(status_code=404, detail=f"No lottery found for given date: {closing_date}")
 
         if lottery.closed:
-            logger.info("Lottery %s (%s) already closed; skipping", lottery.lottery_id, closing_date)
-            raise HTTPException(status_code=418, detail=" It’s already been closed")
+            logger.info("Service: Lottery %s (date %s) already closed; skipping.", lottery.lottery_id, closing_date)
+            raise HTTPException(status_code=409, detail=f"Lottery for date {closing_date} (ID: {lottery.lottery_id}) is already closed.")
 
         ballots = self.ballot_repo.list_by_lottery(lottery.lottery_id)
+        win_record_model = None 
+
         if not ballots:
             logger.warning(
-                "No ballots submitted for lottery %s on %s. Cannot draw a winner.",
+                "Service: No ballots submitted for lottery %s on %s. Attempting to close without a winner.",
                 lottery.lottery_id, closing_date
             )
             try:
-                self.lottery_repo.mark_as_closed(lottery.lottery_id)
-                logger.info("Lottery %s marked as closed without a winner due to no ballots.", lottery.lottery_id)
-            except Exception as e: 
-                logger.error("Failed to mark lottery %s as closed after finding no ballots: %s", lottery.lottery_id, e)
-            raise NoBallotsFoundError(lottery_id=lottery.lottery_id, lottery_date=closing_date)
+                closed_lottery_no_ballots = self.lottery_repo.mark_as_closed(lottery.lottery_id)
+                if not closed_lottery_no_ballots or not closed_lottery_no_ballots.closed:
+                    raise LotteryUpdateError(
+                        lottery_id=lottery.lottery_id,
+                        operation="mark_as_closed_no_ballots",
+                        reason="Repository failed to confirm lottery closure or returned an unexpected state."
+                    )
+                logger.info("Service: Lottery %s (assumed) marked as closed by repository (no ballots).", lottery.lottery_id)
+                raise NoBallotsFoundError(lottery_id=lottery.lottery_id, lottery_date=closing_date)
+            except NoBallotsFoundError:
+                raise
+            except Exception as e_close_no_ballot:
+                logger.error(
+                    "Service: Failed to process lottery %s closure (no ballots scenario): %s",
+                    lottery.lottery_id, e_close_no_ballot, exc_info=True
+                )
+                if not isinstance(e_close_no_ballot, LotteryUpdateError):
+                    raise LotteryUpdateError(
+                        lottery_id=lottery.lottery_id,
+                        operation="mark_as_closed_no_ballots",
+                        reason=str(e_close_no_ballot)
+                    ) from e_close_no_ballot
+                else:
+                    raise 
 
         winner_ballot = random.choice(ballots)
         logger.info(
-            "Selected winner ballot %s for lottery %s on %s",
+            "Service: Selected winner ballot %s for lottery %s on %s",
             winner_ballot.ballot_id, lottery.lottery_id, closing_date
         )
 
@@ -104,21 +138,42 @@ class LotteryService:
                 ballot_id=winner_ballot.ballot_id,
                 winning_date=closing_date,
             )
-            if win_record_model is None: 
-                 raise WinnerPersistenceError(lottery.lottery_id, winner_ballot.ballot_id, "Repository returned None")
-            logger.info("Winning record created for lottery %s: ballot %s",
+            if win_record_model is None:
+                raise WinnerPersistenceError(lottery.lottery_id, winner_ballot.ballot_id, "Repository returned None upon winning ballot creation.")
+            logger.info("Service: Winning record (assumed) created by repository for lottery %s: ballot %s",
                         lottery.lottery_id, winner_ballot.ballot_id)
-        except Exception as e:
-            logger.error("Failed to persist winning ballot for lottery %s: %s", lottery.lottery_id, e)
-            raise WinnerPersistenceError(lottery.lottery_id, winner_ballot.ballot_id, str(e))
+        except Exception as e_persist:
+            logger.error("Service: Failed to persist winning ballot for lottery %s: %s", lottery.lottery_id, e_persist, exc_info=True)
+            raise WinnerPersistenceError(
+                lottery_id=lottery.lottery_id,
+                ballot_id=winner_ballot.ballot_id,
+                reason=str(e_persist)
+            ) from e_persist
+
 
         try:
-            self.lottery_repo.mark_as_closed(lottery.lottery_id)
-            logger.debug("Lottery %s marked as closed after successful draw.", lottery.lottery_id)
-        except Exception as e: 
-            logger.error("Failed to mark lottery %s as closed after draw and winner persistence: %s", lottery.lottery_id, e)
-            raise LotteryUpdateError(lottery.lottery_id, "mark_as_closed", f"Failed after winner persistence: {str(e)}")
+            closed_lottery_with_winner = self.lottery_repo.mark_as_closed(lottery.lottery_id)
+            if not closed_lottery_with_winner or not closed_lottery_with_winner.closed:
+                raise LotteryUpdateError(
+                    lottery_id=lottery.lottery_id,
+                    operation="mark_as_closed_after_draw",
+                    reason="Repository failed to confirm lottery closure or returned an unexpected state after draw."
+                )
+            logger.info("Service: Lottery %s (assumed) marked as closed by repository after successful draw.", lottery.lottery_id)
+        except Exception as e_close_final:
+            logger.error(
+                "Service: CRITICAL - Failed to mark lottery %s as closed AFTER winner persistence. DATA INCONSISTENCY IS LIKELY: %s",
+                lottery.lottery_id, e_close_final, exc_info=True
+            )
+            # A winner IS PERSISTED, but lottery closing FAILED.
+            raise LotteryUpdateError(
+                lottery_id=lottery.lottery_id,
+                operation="mark_as_closed_after_draw_CRITICAL",
+                reason=f"Winner persisted, but final lottery closure failed. Data inconsistency likely. Reason: {str(e_close_final)}"
+            ) from e_close_final
 
+        # If all individual repository operations succeeded in sequence:
+        logger.info("Service: Lottery close and draw process for date %s completed all steps.", closing_date)
         return WinningBallotResponse.model_validate(win_record_model)
 
     def create_lottery(self, target_date: date) -> LotteryResponse:
@@ -132,7 +187,6 @@ class LotteryService:
         if existing_lottery:
             logger.warning(f"Lottery already exists for date {target_date} with ID {existing_lottery.lottery_id}")
             raise LotteryAlreadyExistsError(target_date)
-
         try:
             lottery_model = self.lottery_repo.create_lottery(input_date=target_date)
             if lottery_model is None: 

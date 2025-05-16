@@ -17,7 +17,7 @@ def get_all_winners(
     service: WinnerService = Depends(WinnerService),
 ):
     """
-    Registers a new ballot. Raises 400 if already exists.
+    Get all winning ballots. 
     """
     return service.list_all_winning_ballots()
 

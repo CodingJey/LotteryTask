@@ -32,7 +32,7 @@ def create_ballot_with_expiry_date(
     """
     return service.create_ballot_with_date(req)
 
-@router.get("/ballot",
+@router.get("/ballot/{user_id}",
              response_model=List[BallotResponse],
              summary="List of ballots per user")
 def list_ballots_by_user(
@@ -42,4 +42,5 @@ def list_ballots_by_user(
     """
     Lists Ballots by UserID. Raises 404 if list is empty.
     """
+    
     return service.list_ballots_by_user(user_id=user_id)

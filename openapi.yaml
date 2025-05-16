@@ -4,13 +4,13 @@ info:
   description: server side backend renderer
   version: 1.0.0
 paths:
-  /lottery/v1/participant:
+  /api/v1/participant:
     get:
       tags:
         - lottery
       summary: Get all participants
       description: Retrieve all participants.
-      operationId: get_participants_list_lottery_v1_participant_get
+      operationId: get_participants_list_api_v1_participant_get
       responses:
         '200':
           description: Successful Response
@@ -20,13 +20,13 @@ paths:
                 items:
                   $ref: '#/components/schemas/ParticipantResponse'
                 type: array
-                title: Response Get Participants List Lottery V1 Participant Get
+                title: Response Get Participants List Api V1 Participant Get
     post:
       tags:
         - lottery
       summary: Create a new participant
       description: Registers a new participant. Raises 400 if already exists.
-      operationId: create_ballot_lottery_v1_participant_post
+      operationId: create_ballot_api_v1_participant_post
       requestBody:
         content:
           application/json:
@@ -46,13 +46,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /lottery/v1/participant/{user_id}:
+  /api/v1/participant/{user_id}:
     get:
       tags:
         - lottery
       summary: Get a Participant by its ID
       description: Retrieve participant by id.
-      operationId: get_participant_by_id_lottery_v1_participant__user_id__get
+      operationId: get_participant_by_id_api_v1_participant__user_id__get
       parameters:
         - name: user_id
           in: path
@@ -69,20 +69,20 @@ paths:
                 anyOf:
                   - $ref: '#/components/schemas/ParticipantResponse'
                   - type: 'null'
-                title: Response Get Participant By Id Lottery V1 Participant  User Id  Get
+                title: Response Get Participant By Id Api V1 Participant  User Id  Get
         '422':
           description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /lottery/v1/:
+  /api/v1/lottery:
     get:
       tags:
         - lottery
       summary: List all lotteries
       description: Retrieves a list of all lotteries.
-      operationId: list_all_lotteries_lottery_v1__get
+      operationId: list_all_lotteries_api_v1_lottery_get
       responses:
         '200':
           description: Successful Response
@@ -92,7 +92,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/LotteryResponse'
                 type: array
-                title: Response List All Lotteries Lottery V1  Get
+                title: Response List All Lotteries Api V1 Lottery Get
     post:
       tags:
         - lottery
@@ -105,7 +105,7 @@ paths:
         Raises:
         - `409 Conflict`: If a lottery for the given date already exists.
         - `400 Bad Request`: If there's an issue with creating the lottery (e.g., repository error).
-      operationId: create_lottery_lottery_v1__post
+      operationId: create_lottery_api_v1_lottery_post
       requestBody:
         content:
           application/json:
@@ -125,13 +125,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /lottery/v1/close:
+  /api/v1/lottery/close:
     post:
       tags:
         - lottery
       summary: Close lottery and Draw Winner Ballot
-      description: Registers a new ballot. Raises 400 if already exists.
-      operationId: close_lottery_and_draw_lottery_v1_close_post
+      description: Closes lottery and Draws winner. Raises 400 if already exists.
+      operationId: close_lottery_and_draw_api_v1_lottery_close_post
       responses:
         '200':
           description: Successful Response
@@ -139,13 +139,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WinningBallotResponse'
-  /lottery/v1/open:
+  /api/v1/lottery/open:
     get:
       tags:
         - lottery
       summary: List all open lotteries
       description: Retrieves a list of all lotteries that are currently open (not closed).
-      operationId: list_open_lotteries_lottery_v1_open_get
+      operationId: list_open_lotteries_api_v1_lottery_open_get
       responses:
         '200':
           description: Successful Response
@@ -155,8 +155,8 @@ paths:
                 items:
                   $ref: '#/components/schemas/LotteryResponse'
                 type: array
-                title: Response List Open Lotteries Lottery V1 Open Get
-  /lottery/v1/active-today:
+                title: Response List Open Lotteries Api V1 Lottery Open Get
+  /api/v1/lottery/active-today:
     get:
       tags:
         - lottery
@@ -164,7 +164,7 @@ paths:
       description: |-
         Retrieves the active (open) lottery for the current date.
         Returns the lottery details if found and open, otherwise returns null/None.
-      operationId: get_todays_active_lottery_lottery_v1_active_today_get
+      operationId: get_todays_active_lottery_api_v1_lottery_active_today_get
       responses:
         '200':
           description: Successful Response
@@ -174,8 +174,8 @@ paths:
                 anyOf:
                   - $ref: '#/components/schemas/LotteryResponse'
                   - type: 'null'
-                title: Response Get Todays Active Lottery Lottery V1 Active Today Get
-  /lottery/v1/{lottery_id}:
+                title: Response Get Todays Active Lottery Api V1 Lottery Active Today Get
+  /api/v1/lottery/{lottery_id}:
     get:
       tags:
         - lottery
@@ -185,7 +185,7 @@ paths:
 
         Raises:
         - `404 Not Found`: If the lottery with the given ID does not exist.
-      operationId: get_lottery_lottery_v1__lottery_id__get
+      operationId: get_lottery_api_v1_lottery__lottery_id__get
       parameters:
         - name: lottery_id
           in: path
@@ -206,7 +206,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /lottery/v1/by-date/{target_date}:
+  /api/v1/lottery/by-date/{target_date}:
     get:
       tags:
         - lottery
@@ -216,7 +216,7 @@ paths:
 
         Raises:
         - `404 Not Found`: If no lottery exists for the given date.
-      operationId: get_lottery_by_date_lottery_v1_by_date__target_date__get
+      operationId: get_lottery_by_date_api_v1_lottery_by_date__target_date__get
       parameters:
         - name: target_date
           in: path
@@ -238,13 +238,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /lottery/v1/ballot/{user_id}:
+  /api/v1/ballot/{user_id}:
     post:
       tags:
         - lottery
       summary: Create a new ballot
       description: Registers a new ballot. Raises 400 if already exists.
-      operationId: create_ballot_lottery_v1_ballot__user_id__post
+      operationId: create_ballot_api_v1_ballot__user_id__post
       parameters:
         - name: user_id
           in: path
@@ -265,41 +265,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /lottery/v1/ballot:
-    post:
-      tags:
-        - lottery
-      summary: Create a new ballot with a specific expiry date
-      description: Registers a new ballot. Raises 400 if already exists.
-      operationId: create_ballot_with_expiry_date_lottery_v1_ballot_post
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BallotCreate'
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BallotResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
     get:
       tags:
         - lottery
       summary: List of ballots per user
       description: Lists Ballots by UserID. Raises 404 if list is empty.
-      operationId: list_ballots_by_user_lottery_v1_ballot_get
+      operationId: list_ballots_by_user_api_v1_ballot__user_id__get
       parameters:
         - name: user_id
-          in: query
+          in: path
           required: true
           schema:
             type: integer
@@ -313,20 +287,46 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/BallotResponse'
-                title: Response List Ballots By User Lottery V1 Ballot Get
+                title: Response List Ballots By User Api V1 Ballot  User Id  Get
         '422':
           description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /lottery/v1/winner-ballot:
+  /api/v1/ballot:
+    post:
+      tags:
+        - lottery
+      summary: Create a new ballot with a specific expiry date
+      description: Registers a new ballot. Raises 400 if already exists.
+      operationId: create_ballot_with_expiry_date_api_v1_ballot_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BallotCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BallotResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/winner-ballot:
     get:
       tags:
         - lottery
       summary: Get all winning ballots
-      description: Registers a new ballot. Raises 400 if already exists.
-      operationId: get_all_winners_lottery_v1_winner_ballot_get
+      description: Get all winning ballots.
+      operationId: get_all_winners_api_v1_winner_ballot_get
       responses:
         '200':
           description: Successful Response
@@ -336,14 +336,14 @@ paths:
                 items:
                   $ref: '#/components/schemas/WinningBallotResponse'
                 type: array
-                title: Response Get All Winners Lottery V1 Winner Ballot Get
-  /lottery/v1/winner-ballot/by-date:
+                title: Response Get All Winners Api V1 Winner Ballot Get
+  /api/v1/winner-ballot/by-date:
     get:
       tags:
         - lottery
       summary: Get a winner by a given winning date
       description: Get a winning ballot by Date. Raises 400 if already exists.
-      operationId: get_winner_by_winning_date_lottery_v1_winner_ballot_by_date_get
+      operationId: get_winner_by_winning_date_api_v1_winner_ballot_by_date_get
       parameters:
         - name: winning_date
           in: query
@@ -365,13 +365,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /lottery/v1/winner-ballot/{lottery_id}:
+  /api/v1/winner-ballot/{lottery_id}:
     get:
       tags:
         - lottery
       summary: Get a winner by a given winning lottery ID
       description: Get a winning lottery by ID. Raises 400 if already exists.
-      operationId: get_winner_by_lottery_id_lottery_v1_winner_ballot__lottery_id__get
+      operationId: get_winner_by_lottery_id_api_v1_winner_ballot__lottery_id__get
       parameters:
         - name: lottery_id
           in: path
@@ -417,6 +417,10 @@ components:
       title: BallotCreate
     BallotResponse:
       properties:
+        ballot_id:
+          type: integer
+          title: Ballot Id
+          description: Primary key of the ballot
         user_id:
           type: integer
           title: User Id
@@ -425,25 +429,21 @@ components:
           type: integer
           title: Lottery Id
           description: ID of the Lottery this ballot belongs to
+        ballot_number:
+          type: integer
+          title: Ballot Number
+          description: Number assigned to the ballot. Can be None.
         expiry_date:
           type: string
           format: date
           title: Expiry Date
           description: Date when this ballot expires. Can be None.
           example: '2025-05-15'
-        ballot_id:
-          type: integer
-          title: Ballot Id
-          description: Primary key of the ballot
-        ballot_number:
-          type: integer
-          title: Ballot Number
-          description: Number assigned to the ballot. Can be None.
       type: object
       required:
+        - ballot_id
         - user_id
         - lottery_id
-        - ballot_id
       title: BallotResponse
     CreateLotteryRequest:
       properties:

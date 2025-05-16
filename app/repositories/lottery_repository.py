@@ -52,10 +52,10 @@ class LotteryRepository(BaseRepository[Lottery], LotteryRepositoryInterface):
         lottery = result.scalars().first()
         if lottery:
             logger.info(f"Found Lottery ID={lottery.lottery_id} for Date={target_date}")
-            raise HTTPException(status_code=409, detail="Lottery already closed") 
+            return lottery
         else:
             logger.warning(f"No Lottery found for Date={target_date}")
-        return lottery
+            return None
 
     def get_lottery(self, lottery_id) -> Optional[Lottery]:
         return self.get(lottery_id)

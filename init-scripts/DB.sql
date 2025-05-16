@@ -15,9 +15,11 @@ CREATE TABLE Ballots (
     ballot_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES Participants(user_id),
     lottery_id INTEGER NOT NULL REFERENCES Lotteries(lottery_id),
-    ballot_number VARCHAR(255) UNIQUE,
+    ballot_number BIGINT UNIQUE,
     expiry_date DATE,
-    CONSTRAINT fk_participant FOREIGN KEY (user_id) REFERENCES Participants(user_id)
+    CONSTRAINT fk_participant FOREIGN KEY (user_id) REFERENCES Participants(user_id),
+    CONSTRAINT chk_ballot_number CHECK (ballot_number > 0 AND ballot_number <= 99999999999)
+
 );
 
 CREATE TABLE WinningBallots (

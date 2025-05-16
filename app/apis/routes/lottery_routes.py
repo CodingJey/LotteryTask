@@ -13,7 +13,7 @@ logger = logging.getLogger("app")
 
 router = APIRouter()
 
-@router.post("/",
+@router.post("/lottery",
              response_model=LotteryResponse,
              status_code=201,
              summary="Create a new lottery")
@@ -41,18 +41,18 @@ def create_lottery(
         logger.error(f"API Error: Failed to create lottery - {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/close",
+@router.post("/lottery/close",
              response_model=WinningBallotResponse,
              summary="Close lottery and Draw Winner Ballot")
 def close_lottery_and_draw(
     service: LotteryService = Depends(LotteryService),
 ):
     """
-    Registers a new ballot. Raises 400 if already exists.
+    Closes lottery and Draws winner. Raises 400 if already exists.
     """
     return service.close_lottery_and_draw()
 
-@router.get("/",
+@router.get("/lottery",
              response_model=List[LotteryResponse],
              summary="List all lotteries")
 def list_all_lotteries(
@@ -64,7 +64,7 @@ def list_all_lotteries(
     logger.debug("API: Fetching all lotteries.")
     return service.get_all_lotteries()
 
-@router.get("/open",
+@router.get("/lottery/open",
              response_model=List[LotteryResponse],
              summary="List all open lotteries")
 def list_open_lotteries(
@@ -76,7 +76,7 @@ def list_open_lotteries(
     logger.debug("API: Fetching all open lotteries.")
     return service.get_open_lotteries()
 
-@router.get("/active-today",
+@router.get("/lottery/active-today",
             response_model=Optional[LotteryResponse],
             summary="Get today's active lottery")
 def get_todays_active_lottery(
@@ -92,7 +92,7 @@ def get_todays_active_lottery(
         logger.info("API: No active lottery found for today.")
     return lottery
 
-@router.get("/{lottery_id}",
+@router.get("/lottery/{lottery_id}",
              response_model=LotteryResponse,
              summary="Get a lottery by its ID")
 def get_lottery(
@@ -109,7 +109,7 @@ def get_lottery(
     lottery = service.get_lottery(lottery_id)
     return lottery
 
-@router.get("/by-date/{target_date}",
+@router.get("/lottery/by-date/{target_date}",
              response_model=LotteryResponse,
              summary="Get a lottery by its date")
 def get_lottery_by_date(

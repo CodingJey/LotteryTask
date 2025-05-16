@@ -80,7 +80,5 @@ class BallotRepository(BaseRepository[Ballot], BallotRepositoryInterface):
         result = self.session.execute(stmt)
         return result.scalars().all()
 
-def get_ballot_repository_provider(
-    session: Session = Depends(db.get_db)
-) -> BallotRepositoryInterface:
+def get_ballot_repository_provider(session: Session = Depends(db.get_db)) -> BallotRepositoryInterface:
     return BallotRepository(session=session)
